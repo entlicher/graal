@@ -1,0 +1,20 @@
+# Intergation test of CDT with Inspector backend.
+name: Weekly CDT Inspector
+
+on:
+  schedule:
+    - cron: "30 2 * * 5" # Friday at 2:30
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: dev
+      id: setup-chrome
+    - run: |
+        echo Installed chromium version: ${{ steps.setup-chrome.outputs.chrome-version }}
+        ${{ steps.setup-chrome.outputs.chrome-path }} --version
