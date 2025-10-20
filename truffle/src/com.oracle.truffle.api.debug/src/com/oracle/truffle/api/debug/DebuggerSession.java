@@ -221,6 +221,7 @@ public final class DebuggerSession implements Closeable {
     private final ThreadLocal<Set<Integer>> steppingEnabledSlots = new ThreadLocal<>();
 
     private final int sessionId;
+    private final TimeTravelRecorder timeTravelRecorder;
 
     private volatile boolean closed;
 
@@ -228,6 +229,7 @@ public final class DebuggerSession implements Closeable {
         this.sessionId = SESSIONS.incrementAndGet();
         this.debugger = debugger;
         this.callback = callback;
+        this.timeTravelRecorder = new TimeTravelRecorder();
         switch (sourceElements.length) {
             case 0:
                 this.sourceElements = Collections.emptySet();
@@ -627,6 +629,100 @@ public final class DebuggerSession implements Closeable {
         }
 
         setSteppingStrategy(t, SteppingStrategy.createContinue(), true);
+    }
+
+    /**
+     * Enables or disables time-travel recording for this debugging session. When enabled, the
+     * debugger records execution state at each suspension point, allowing backward stepping through
+     * execution history.
+     *
+     * @param enabled true to enable recording, false to disable
+     * @since 24.2.0
+     */
+    public void setTimeTravelEnabled(boolean enabled) {
+        if (closed) {
+            throw new IllegalStateException("session closed");
+        }
+        timeTravelRecorder.setEnabled(enabled);
+    }
+
+    /**
+     * Returns whether time-travel recording is enabled for this debugging session.
+     *
+     * @return true if recording is enabled, false otherwise
+     * @since 24.2.0
+     */
+    public boolean isTimeTravelEnabled() {
+        return timeTravelRecorder.isEnabled();
+    }
+
+    /**
+     * Checks if stepping backward in time is possible.
+     *
+     * @return true if there are previous execution snapshots available
+     * @since 24.2.0
+     */
+    public boolean canStepBackward() {
+        return timeTravelRecorder.canStepBackward();
+    }
+
+    /**
+     * Checks if stepping forward in time is possible (when in replay mode).
+     *
+     * @return true if there are future execution snapshots available
+     * @since 24.2.0
+     */
+    public boolean canStepForward() {
+        return timeTravelRecorder.canStepForward();
+    }
+
+    /**
+     * Gets the current execution snapshot when in replay mode.
+     *
+     * @return the current snapshot, or null if not in replay mode
+     * @since 24.2.0
+     */
+    public TimeTravelSnapshot getCurrentSnapshot() {
+        return timeTravelRecorder.getCurrentSnapshot();
+    }
+
+    /**
+     * Gets the entire execution history.
+     *
+     * @return list of all recorded snapshots
+     * @since 24.2.0
+     */
+    public List<TimeTravelSnapshot> getExecutionHistory() {
+        return timeTravelRecorder.getHistory();
+    }
+
+    /**
+     * Clears all recorded execution history.
+     *
+     * @since 24.2.0
+     */
+    public void clearExecutionHistory() {
+        timeTravelRecorder.clear();
+    }
+
+    /**
+     * Gets the current position in the execution history.
+     *
+     * @return the current position index
+     * @since 24.2.0
+     */
+    public int getHistoryPosition() {
+        return timeTravelRecorder.getCurrentPosition();
+    }
+
+    /**
+     * Gets the total number of snapshots in the execution history.
+     *
+     * @return the history size
+     * @since 24.2.0
+     */
+    public int getHistorySize() {
+        return timeTravelRecorder.getHistorySize();
     }
 
     private synchronized void setSteppingStrategy(Thread thread, SteppingStrategy strategy, boolean updateStepping) {
@@ -1346,6 +1442,10 @@ public final class DebuggerSession implements Closeable {
                 exception.setSuspendedEvent(suspendedEvent);
             }
             currentSuspendedEventMap.put(currentThread, suspendedEvent);
+            
+            // Record snapshot for time-travel debugging
+            timeTravelRecorder.recordSnapshot(suspendedEvent);
+            
             try {
                 callback.onSuspend(suspendedEvent);
             } finally {
