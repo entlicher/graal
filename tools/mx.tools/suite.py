@@ -272,6 +272,32 @@ suite = {
             "javaCompliance" : "17+",
             "workingSets" : "Tools",
         },
+        "com.oracle.truffle.tools.timetravel" : {
+            "subDir" : "src",
+            "sourceDirs" : ["src"],
+            "dependencies" : [
+                "truffle:TRUFFLE_API",
+            ],
+            "exports" : [
+              "<package-info>", # exports all packages containing package-info.java
+            ],
+            "annotationProcessors" : ["truffle:TRUFFLE_DSL_PROCESSOR"],
+            "checkstyle" : "com.oracle.truffle.tools.chromeinspector",
+            "javaCompliance" : "17+",
+            "workingSets" : "Tools",
+        },
+        "com.oracle.truffle.tools.timetravel.test" : {
+            "subDir" : "src",
+            "sourceDirs" : ["src"],
+            "dependencies" : [
+                "com.oracle.truffle.tools.timetravel",
+                "truffle:TRUFFLE_TEST",
+            ],
+            "annotationProcessors" : ["truffle:TRUFFLE_DSL_PROCESSOR"],
+            "checkstyle" : "com.oracle.truffle.tools.chromeinspector",
+            "javaCompliance" : "17+",
+            "workingSets" : "Tools",
+        },
         "org.graalvm.tools.api.lsp": {
             "subDir": "src",
             "sourceDirs": ["src"],
@@ -720,6 +746,61 @@ suite = {
             "description" : "Truffle Debug Protocol Server distribution for the GraalVM",
             "layout" : {
                 "native-image.properties" : "file:mx.tools/tools-dap.properties",
+            },
+        },
+        "TIME_TRAVEL": {
+            "subDir": "src",
+            # This distribution defines a module.
+            "moduleInfo" : {
+                "name" : "com.oracle.truffle.tools.timetravel",
+                "requires": [
+                  "org.graalvm.polyglot",
+                ],
+            },
+            "useModulePath" : True,
+            "dependencies": [
+                "com.oracle.truffle.tools.timetravel",
+            ],
+            "distDependencies" : [
+                "truffle:TRUFFLE_API",
+            ],
+            "maven" : {
+              "artifactId" : "timetravel-tool",
+              "tag": ["default", "public"],
+            },
+            "description" : "Core module of the Time-Travel Debugger for Truffle",
+        },
+        "TIME_TRAVEL_POM": {
+            "type": "pom",
+            "runtimeDependencies": [
+                "TIME_TRAVEL",
+                "truffle:TRUFFLE_RUNTIME",
+            ],
+            "maven": {
+              "groupId" : "org.graalvm.polyglot",
+              "artifactId": "timetravel",
+              "tag": ["default", "public"],
+            },
+            "description": "The Time-Travel Debugger for Truffle"
+        },
+        "TIME_TRAVEL_TEST": {
+            "subDir": "src",
+            "dependencies": [
+                "com.oracle.truffle.tools.timetravel.test",
+            ],
+            "distDependencies" : [
+                "truffle:TRUFFLE_TEST",
+                "TIME_TRAVEL",
+            ],
+            "description" : "Tests and examples for the Time-Travel Debugger.",
+            "maven" : False,
+            "unittestConfig": "tools",
+         },
+        "TIME_TRAVEL_GRAALVM_SUPPORT" : {
+            "native" : True,
+            "description" : "Time-Travel Debugger support distribution for the GraalVM",
+            "layout" : {
+                "native-image.properties" : "file:mx.tools/tools-timetravel.properties",
             },
         },
         "VISUALVM_GRAALVM_SUPPORT": {
